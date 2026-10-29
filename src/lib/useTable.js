@@ -34,7 +34,7 @@ export function useTable(table, projectId, { order = 'updated_at', ascending = f
       });
     };
     const channel = supabase
-      .channel(`cc:${table}:${projectId}:${Math.random().toString(36).slice(2, 7)}`)
+      .channel(`cc-t:${table}:${projectId}:${Math.random().toString(36).slice(2, 7)}`, { config: { private: true } })
       .on('postgres_changes', { event: '*', schema: 'public', table, filter: `project_id=eq.${projectId}` }, (p) => {
         setRows((cur) => {
           if (p.eventType === 'DELETE') return cur.filter((r) => r.id !== p.old.id);

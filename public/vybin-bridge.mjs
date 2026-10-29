@@ -178,7 +178,7 @@ async function main() {
       if (job) await runOne(cfg, claudeBin, job); else await sleep(POLL_MS);
     } catch (e) {
       if (/bad_token/.test(e.message)) {
-        console.log('\nThis computer was disconnected from the website. Delete this file and start again to reconnect:', CONFIG_FILE);
+        console.log('\nThis computer was disconnected from the website. Start this program again to connect it with a new code.');
         delete cfg.token; saveConfig(cfg); process.exitCode = 1; return;
       }
       log('Connection problem, retrying:', e.message);

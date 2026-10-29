@@ -281,3 +281,6 @@ a.stat:hover { border-color: var(--muted); }
 .linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; }
 .ok-text { color: var(--ok); font-weight: 550; }
 .steps { padding-left: 20px; margin: 0 0 12px; } .steps li { margin-bottom: 6px; }
+.dl { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+.dl a.btn { text-decoration: none; }
+code { background: var(--ground); padding: 1px 5px; border-radius: 4px; font-size: 13px; }

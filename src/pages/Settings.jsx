@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Download } from 'lucide-react';
 import { useAuth } from '../lib/auth.jsx';
 import { useProject } from '../lib/project.jsx';
 import { supabase } from '../lib/supabase.js';
@@ -21,11 +22,11 @@ async function runChecks({ projectId, user }) {
     : { key: 'files', ok: true, title: 'File storage', text: 'Ready. Files you add are kept privately and never deleted from here.' });
 
   const live = await new Promise((resolve) => {
-    const ch = supabase.channel('cc-check-' + Math.random().toString(36).slice(2, 7));
+    const ch = supabase.channel(`cc-check:${projectId}:${Math.random().toString(36).slice(2, 7)}`, { config: { private: true } });
     const t = setTimeout(() => { supabase.removeChannel(ch); resolve({ ok: false, detail: 'timed out' }); }, 8000);
-    ch.subscribe((s) => {
+    ch.subscribe((s, err) => {
       if (s === 'SUBSCRIBED') { clearTimeout(t); supabase.removeChannel(ch); resolve({ ok: true }); }
-      if (s === 'CHANNEL_ERROR' || s === 'CLOSED') { clearTimeout(t); supabase.removeChannel(ch); resolve({ ok: false, detail: s }); }
+      if (s === 'CHANNEL_ERROR' || s === 'CLOSED') { clearTimeout(t); supabase.removeChannel(ch); resolve({ ok: false, detail: `${s}${err?.message ? ': ' + err.message : ''}` }); }
     });
   });
   out.push(live.ok
@@ -84,7 +85,12 @@ function ConnectClaude({ projectId }) {
       <h3 className="step">{bridge.devices.length ? 'Connect another computer' : 'Connect this computer'}</h3>
       <ol className="steps">
         <li>You need <strong>Node.js</strong> (nodejs.org, the normal installer) and <strong>Claude Code</strong> already installed and signed in on that computer.</li>
-        <li>Download <a className="link" href="/vybin-bridge.mjs" download>the helper</a> and <a className="link" href="/Start-Vybin-Helper.bat" download>the starter</a> into one folder, then double-click the starter. (Windows may warn about a downloaded file. It is a plain text script you can open and read.)</li>
+        <li>Download these two files into <strong>one new folder</strong> (for example <code>C:\VYBIN-helper</code>), then double-click the starter. Windows or Chrome may warn about a downloaded file: choose "Keep". Both are plain text you can open and read.
+          <div className="dl">
+            <a className="btn" href="/vybin-bridge.mjs" download="vybin-bridge.mjs"><Download size={14} /> 1. The helper (vybin-bridge.mjs)</a>
+            <a className="btn" href="/Start-Vybin-Helper.bat" download="Start-Vybin-Helper.bat"><Download size={14} /> 2. The starter (Start-Vybin-Helper.bat)</a>
+          </div>
+        </li>
         <li>The helper asks for your project folder, then shows an 8-character code. Type it here:</li>
       </ol>
       <form className="inline-form" onSubmit={approve}>
