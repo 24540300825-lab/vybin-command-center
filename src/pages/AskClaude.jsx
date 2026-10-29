@@ -6,6 +6,7 @@ import { useTable } from '../lib/useTable.js';
 import { supabase } from '../lib/supabase.js';
 import { PERMISSIONS, RUN_STATUS, timeAgo } from '../lib/plain.js';
 import { buildPieces, buildPrompt, roughTokens } from '../lib/context.js';
+import { useBridge } from '../lib/bridge.js';
 
 const code = (n) => `BR-${String(n).padStart(3, '0')}`;
 
@@ -30,6 +31,7 @@ function useData(projectId) {
 
 // Step: pick what Claude gets to see, how much freedom it has, and review the exact message.
 function Composer({ projectId, data, parent, initialBriefId, onCreated, onCancel }) {
+  const bridge = useBridge(projectId);
   const [briefId, setBriefId] = useState(initialBriefId ?? parent?.brief_id ?? '');
   const [permission, setPermission] = useState(parent?.permission ?? 'read_only');
   const [off, setOff] = useState(new Set());
@@ -60,18 +62,18 @@ function Composer({ projectId, data, parent, initialBriefId, onCreated, onCancel
     setOff((o) => { const n = new Set(o); const isOff = effectiveOff.has(id); if (isOff) n.delete(id); else n.add(id); return n; });
   };
 
-  const create = async (andSend) => {
+  const create = async (andSend, local = false) => {
     if (!brief || !text.trim()) return;
     setBusy(true); setError('');
     const included = pieces.filter((p) => !effectiveOff.has(p.id)).map((p) => ({ id: p.id, group: p.group, label: p.label }));
-    const copied = andSend ? await copyText(text) : false;
+    const copied = andSend && !local ? await copyText(text) : false;
     const { data: run, error: err } = await supabase.from('cc_runs').insert({
-      project_id: projectId, brief_id: brief.id, parent_run_id: parent?.id ?? null, title: brief.title, mode: 'manual',
-      status: andSend ? 'running' : 'draft', permission, prompt: text, context: { included, approx_tokens: roughTokens(text) },
-      started_at: andSend ? new Date().toISOString() : null,
+      project_id: projectId, brief_id: brief.id, parent_run_id: parent?.id ?? null, title: brief.title, mode: local ? 'local' : 'manual',
+      status: local ? 'queued' : andSend ? 'running' : 'draft', permission, prompt: text, context: { included, approx_tokens: roughTokens(text) },
+      started_at: andSend && !local ? new Date().toISOString() : null,
     }).select().single();
     if (err) { setBusy(false); setError("We couldn't save this request. Try again."); return; }
-    await supabase.from('cc_run_events').insert({ project_id: projectId, run_id: run.id, kind: 'status', text: andSend ? (copied ? 'You copied the message to send to Claude.' : 'You marked the message as sent (copying failed, copy it from the box).') : 'Saved as a draft.' });
+    await supabase.from('cc_run_events').insert({ project_id: projectId, run_id: run.id, kind: 'status', text: local ? 'Sent to your computer. Waiting for it to pick the request up.' : andSend ? (copied ? 'You copied the message to send to Claude.' : 'You marked the message as sent (copying failed, copy it from the box).') : 'Saved as a draft.' });
     if (andSend && ['draft', 'ready'].includes(brief.status)) await supabase.from('cc_briefs').update({ status: 'submitted' }).eq('id', brief.id);
     setBusy(false);
     onCreated(run.id, andSend && !copied);
@@ -121,11 +123,13 @@ function Composer({ projectId, data, parent, initialBriefId, onCreated, onCancel
             {edited && <> You edited this message. <button className="linkbtn" onClick={() => { setEdited(false); setText(auto); }}>Start again from my choices</button></>}</p>
           {error && <p className="error" role="alert">{error}</p>}
           <div className="insp-actions">
-            <button className="btn primary" disabled={busy || !text.trim()} onClick={() => create(true)}><Copy size={14} /> Copy message and mark as sent</button>
+            <button className={'btn' + (bridge.online ? '' : ' primary')} disabled={busy || !text.trim()} onClick={() => create(true)}><Copy size={14} /> Copy message and mark as sent</button>
             <button className="btn" disabled={busy || !text.trim()} onClick={() => create(false)}>Save as draft</button>
-            <button className="btn" disabled title="Needs the small helper program on your computer. Not connected yet.">Send to Claude on my computer</button>
+            <button className="btn primary" disabled={busy || !text.trim() || !bridge.online} onClick={() => create(true, true)}
+              title={bridge.online ? undefined : 'Your computer is not connected. See Setup & connections.'}>Send to Claude on my computer</button>
             <button className="btn" onClick={onCancel}>Cancel</button>
           </div>
+          {!bridge.online && <p className="muted small">Sending straight from here needs the helper running on your computer. <Link className="link" to="/settings">Set it up</Link></p>}
           <p className="muted small">"Copy" puts the message on your clipboard. Paste it into Claude (claude.ai or Claude Code), then come back and paste Claude's reply here.</p>
         </>
       )}
@@ -136,6 +140,7 @@ function Composer({ projectId, data, parent, initialBriefId, onCreated, onCancel
 
 function RunView({ run, data, projectId, onFollowUp }) {
   const navigate = useNavigate();
+  const bridge = useBridge(projectId);
   const events = useTable('cc_run_events', projectId, { order: 'created_at', ascending: true, limit: 500, extra: (q) => q.eq('run_id', run.id), match: (r) => r.run_id === run.id, extraKey: run.id });
   const brief = data.briefs.rows.find((b) => b.id === run.brief_id);
   const [reply, setReply] = useState('');
@@ -196,12 +201,22 @@ function RunView({ run, data, projectId, onFollowUp }) {
       {run.status === 'draft' && (
         <div className="insp-actions">
           <button className="btn primary" onClick={markSent}><Copy size={14} /> Copy message and mark as sent</button>
+          <button className="btn" disabled={!bridge.online} title={bridge.online ? undefined : 'Your computer is not connected. See Setup & connections.'}
+            onClick={async () => { if (await setRun({ mode: 'local', status: 'queued' })) { await log('Sent to your computer. Waiting for it to pick the request up.'); if (brief && ['draft', 'ready'].includes(brief.status)) await supabase.from('cc_briefs').update({ status: 'submitted' }).eq('id', brief.id); } }}>Send to Claude on my computer</button>
           {confirm
             ? <button className="btn danger sm" onClick={removeDraft} onBlur={() => setConfirm(false)} autoFocus>Delete this draft</button>
             : <button className="btn" onClick={() => setConfirm(true)}>Delete draft</button>}
         </div>
       )}
       {copied && <p className="muted small" role="status">{copied}</p>}
+
+      {run.mode === 'local' && ['queued', 'running'].includes(run.status) && (
+        <div className="stepbox">
+          <h3 className="step">{run.status === 'queued' ? 'Waiting for your computer to pick this up' : 'Claude is working on your computer'}</h3>
+          <p className="muted small">{run.status === 'queued' ? 'The helper must be running. If it is not, start it. You can leave this page open or come back later.' : 'Steps appear below as they happen. Nothing is called done until you approve it.'}</p>
+          <div className="insp-actions"><button className="btn" onClick={cancel}>Cancel this request</button></div>
+        </div>
+      )}
 
       {run.status === 'running' && run.mode === 'manual' && (
         <div className="stepbox">
@@ -220,6 +235,7 @@ function RunView({ run, data, projectId, onFollowUp }) {
         <div className="stepbox">
           <h3 className="step">Claude's reply</h3>
           <pre className="result">{run.result}</pre>
+          {run.usage?.cost_usd_estimate != null && <p className="muted small">Claude Code reported about ${Number(run.usage.cost_usd_estimate).toFixed(2)} for this run{run.usage.turns ? ` over ${run.usage.turns} steps` : ''}. This is an estimate from your computer, not your plan's usage limit.</p>}
           {run.status === 'needs_review' && (
             <>
               <label className="fieldblock">Your feedback (optional)
@@ -240,6 +256,7 @@ function RunView({ run, data, projectId, onFollowUp }) {
         <div className="insp-actions"><button className="btn" onClick={() => onFollowUp(run)}>Try again as a new request</button></div>
       )}
       {run.error && <p className="error">{run.error}</p>}
+      {run.status === 'failed' && run.result && <details><summary>Technical details</summary><pre className="result">{run.result}</pre></details>}
 
       <details open={showPrompt} onToggle={(e) => setShowPrompt(e.currentTarget.open)}>
         <summary>The message that was prepared ({run.context?.included?.length ?? 0} pieces, about {(run.context?.approx_tokens ?? roughTokens(run.prompt)).toLocaleString()} tokens)</summary>

@@ -4,6 +4,7 @@ import { LayoutDashboard, FileText, Box, Library, MessageSquare, HeartPulse, Pal
 import { useAuth } from '../lib/auth.jsx';
 import { useProject } from '../lib/project.jsx';
 import CommandPalette from './CommandPalette.jsx';
+import { useBridge } from '../lib/bridge.js';
 
 export const NAV = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -19,7 +20,8 @@ export const NAV = [
 
 export default function Shell({ children }) {
   const { user, signOut } = useAuth();
-  const { name } = useProject();
+  const { name, projectId } = useProject();
+  const bridge = useBridge(projectId);
   const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || 'light');
@@ -67,7 +69,8 @@ export default function Shell({ children }) {
           </button>
           <div className="topbar-right">
             <button className="status-chip" onClick={() => navigate('/settings')} title="Open setup">
-              <i className="dot off" aria-hidden /> Claude on your computer: not connected
+              <i className={'dot ' + (bridge.online ? 'ok' : 'off')} aria-hidden />
+              {bridge.online ? `Claude on your computer: connected (${bridge.online.name})` : bridge.devices.length ? 'Claude on your computer: not running' : 'Claude on your computer: not connected'}
             </button>
             <button className="icon-btn" onClick={flip} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
               {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}

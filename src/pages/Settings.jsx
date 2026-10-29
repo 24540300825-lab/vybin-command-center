@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../lib/auth.jsx';
 import { useProject } from '../lib/project.jsx';
 import { supabase } from '../lib/supabase.js';
+import { useBridge } from '../lib/bridge.js';
+import { timeAgo } from '../lib/plain.js';
 
 // Each check says what it found in plain words; raw detail stays behind "Technical details".
 async function runChecks({ projectId, user }) {
@@ -16,7 +18,7 @@ async function runChecks({ projectId, user }) {
   const st = await supabase.storage.from('cc-files').list(projectId, { limit: 1 });
   out.push(st.error
     ? { key: 'files', ok: false, title: 'File storage', text: "Your private file storage isn't reachable.", fix: 'Run the checks again in a minute.', detail: st.error.message }
-    : { key: 'files', ok: true, title: 'File storage', text: 'Ready. Uploading files comes in the next step.' });
+    : { key: 'files', ok: true, title: 'File storage', text: 'Ready. Files you add are kept privately and never deleted from here.' });
 
   const live = await new Promise((resolve) => {
     const ch = supabase.channel('cc-check-' + Math.random().toString(36).slice(2, 7));
@@ -33,10 +35,66 @@ async function runChecks({ projectId, user }) {
 }
 
 const LATER = [
-  { title: 'Claude on your computer', text: 'Not set up yet. This lets Claude work on your real project files. Setup is a guided step that comes with the Ask Claude section.' },
   { title: 'Your code on GitHub', text: "Not connected yet. Needed to show what changed and when." },
   { title: 'Your published website', text: "Not connected yet. Needed to show whether the latest update went live." },
 ];
+
+function ConnectClaude({ projectId }) {
+  const bridge = useBridge(projectId);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null); // {ok, text}
+  const [confirm, setConfirm] = useState(null);
+
+  const approve = async (e) => {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    const { data, error } = await supabase.rpc('cc_bridge_approve_pairing', { p_code: code, p_project: projectId });
+    setBusy(false);
+    if (error) setMsg({ ok: false, text: /code_not_found/.test(error.message) ? "That code isn't waiting for approval. Check the code in the helper window, or start the helper again for a new one." : "We couldn't connect that computer. Try again." });
+    else { setMsg({ ok: true, text: `Connected "${data.name}". Keep the helper window open.` }); setCode(''); }
+  };
+  const disconnect = async (id) => {
+    const { error } = await supabase.rpc('cc_bridge_revoke', { p_device: id });
+    setConfirm(null);
+    if (error) setMsg({ ok: false, text: "We couldn't disconnect that computer. Try again." });
+  };
+
+  return (
+    <section className="panel">
+      <div className="panel-head"><h2>Claude on your computer</h2></div>
+      <p className="muted">A small helper program on your computer lets this website send a request straight to the Claude Code you already use. This website never sees your Claude password or login. The helper works only inside the one project folder you choose, and only as far as each request allows.</p>
+      {bridge.devices.length > 0 && (
+        <ul className="checks">
+          {bridge.devices.map((d) => (
+            <li key={d.id}>
+              <i className={'dot ' + (d.online ? 'ok' : 'off')} />
+              <div className="grow">
+                <strong>{d.name}</strong>
+                <p>{d.online ? 'Connected and waiting for requests.' : d.last_seen_at ? `Not running. Last seen ${timeAgo(d.last_seen_at)}. Start the helper again.` : 'Paired, but the helper has not checked in yet.'}</p>
+                {d.info?.folder && <p className="small">Project folder: {d.info.folder} · Claude Code {d.info.claude}</p>}
+              </div>
+              {confirm === d.id
+                ? <button className="btn danger sm" onClick={() => disconnect(d.id)} onBlur={() => setConfirm(null)} autoFocus>Disconnect this computer</button>
+                : <button className="btn sm" onClick={() => setConfirm(d.id)}>Disconnect</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <h3 className="step">{bridge.devices.length ? 'Connect another computer' : 'Connect this computer'}</h3>
+      <ol className="steps">
+        <li>You need <strong>Node.js</strong> (nodejs.org, the normal installer) and <strong>Claude Code</strong> already installed and signed in on that computer.</li>
+        <li>Download <a className="link" href="/vybin-bridge.mjs" download>the helper</a> and <a className="link" href="/Start-Vybin-Helper.bat" download>the starter</a> into one folder, then double-click the starter. (Windows may warn about a downloaded file. It is a plain text script you can open and read.)</li>
+        <li>The helper asks for your project folder, then shows an 8-character code. Type it here:</li>
+      </ol>
+      <form className="inline-form" onSubmit={approve}>
+        <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABCD-1234" aria-label="Connection code" maxLength={9} />
+        <button className="btn primary" disabled={busy || code.replace('-', '').length < 8}>Connect</button>
+      </form>
+      {msg && <p className={msg.ok ? 'ok-text' : 'error'} role="status">{msg.text}</p>}
+    </section>
+  );
+}
 
 export default function Settings() {
   const { user } = useAuth();
@@ -53,6 +111,8 @@ export default function Settings() {
     <div className="page">
       <h1>Setup &amp; connections</h1>
       <p className="muted lead">These checks run on their own. If something needs attention, it says what to do.</p>
+
+      <ConnectClaude projectId={projectId} />
 
       <section className="panel">
         <div className="panel-head"><h2>{name}</h2><button className="btn sm" onClick={run} disabled={!checks}>Run checks again</button></div>

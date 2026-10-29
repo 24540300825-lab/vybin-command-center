@@ -50,7 +50,7 @@ export const RUN_STATUS = {
 export const PERMISSIONS = {
   read_only: { label: 'Look and advise only', help: "Claude reads your project and tells you what it would change. It can't change or run anything." },
   edit_files: { label: 'Make changes to files', help: "Claude can create and edit files in your project folder, but can't run programs or use the internet." },
-  edit_and_run: { label: 'Make changes and test them', help: 'Claude can also run commands such as a build or a test, only inside your project folder. Use this when you trust the task.' },
+  edit_and_run: { label: 'Make changes and test them', help: 'Claude can also run a short list of commands (build, test, and read-only git checks) inside your project folder. Use this when you trust the task.' },
 };
 export const STARTER_GUIDELINES = [
   ['Art style', ''],
