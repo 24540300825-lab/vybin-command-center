@@ -52,6 +52,18 @@ function claudeVersion(bin) {
   return r.status === 0 ? r.stdout.trim() : null;
 }
 
+// Asks Claude Code whether it is signed in. Returns true / false, or null when it can't tell (older versions). Never prints account details.
+function claudeSignedIn(bin) {
+  const needsShell = /\.(cmd|bat)$/i.test(bin);
+  const r = spawnSync(needsShell ? `"${bin}"` : bin, ['auth', 'status'], { encoding: 'utf8', shell: needsShell, timeout: 20000 });
+  if (r.error) return null;
+  const out = `${r.stdout || ''}${r.stderr || ''}`;
+  if (/unknown command|unrecognized|did you mean/i.test(out)) return null;
+  if (/"loggedIn"\s*:\s*false|not (logged|signed) in|no (active )?(account|session)/i.test(out)) return false;
+  if (r.status === 0) return true;
+  return null;
+}
+
 // ---- what each permission level allows ----
 function claudeArgs(permission) {
   const base = ['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'dontAsk'];
@@ -153,6 +165,12 @@ async function main() {
     process.exitCode = 1; return;
   }
   console.log(`Found Claude Code ${version}`);
+  const signedIn = claudeSignedIn(claudeBin);
+  if (signedIn === false) {
+    console.log('\nHeads up: Claude Code on this computer is NOT signed in yet, so requests will fail.');
+    console.log('To fix it: close this window, open PowerShell (or Terminal), type   claude   and press Enter, then follow the sign-in steps it shows.');
+    console.log('When it says you are signed in, start this helper again. (You can keep going now; the helper will still connect.)\n');
+  } else if (signedIn === true) console.log('Claude Code is signed in.');
 
   const cfg = loadConfig();
   if (!cfg.deviceName) cfg.deviceName = os.hostname();
