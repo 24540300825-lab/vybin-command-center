@@ -263,3 +263,19 @@ a.stat:hover { border-color: var(--muted); }
   .stage-body { grid-template-columns: 1fr; grid-template-rows: 46vh auto auto; overflow-y: auto; }
   .stage-center { order: -1; }
 }
+
+/* ask claude */
+.step { font-size: 14px; margin: 18px 0 8px; }
+.grouphead { margin: 8px 0 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.pieces { margin-bottom: 4px; }
+.pieces li { padding: 4px 0 !important; border-top: 0 !important; }
+.pieces label { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 450; }
+.pieces input, .perm input { width: auto; }
+.perms { display: grid; gap: 8px; }
+.perm { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; background: var(--panel); }
+.perm.on { border-color: var(--accent); background: var(--accent-soft); }
+.perm small { display: block; color: var(--muted); font-size: 13px; }
+.prompt { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 13px; }
+.result { max-height: 420px; overflow: auto; font-size: 13px; }
+.stepbox { margin-top: 8px; }
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; }

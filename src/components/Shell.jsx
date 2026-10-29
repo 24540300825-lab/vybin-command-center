@@ -10,9 +10,9 @@ export const NAV = [
   { to: '/briefs', label: 'Briefs', icon: FileText },
   { to: '/scenes', label: '3D scenes', icon: Box },
   { to: '/assets', label: 'Assets', icon: Library },
-  { to: '/claude', label: 'Ask Claude', icon: MessageSquare, soon: true },
+  { to: '/claude', label: 'Ask Claude', icon: MessageSquare },
   { to: '/health', label: 'Project health', icon: HeartPulse, soon: true },
-  { to: '/art', label: 'Art direction', icon: Palette, soon: true },
+  { to: '/art', label: 'Art direction', icon: Palette },
   { to: '/activity', label: 'Activity', icon: History },
   { to: '/settings', label: 'Setup & connections', icon: Settings },
 ];
