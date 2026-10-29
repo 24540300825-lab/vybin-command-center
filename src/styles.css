@@ -220,3 +220,8 @@ a.stat:hover { border-color: var(--muted); }
 .fields select { width: 100%; }
 .link:hover { color: var(--accent); text-decoration: underline; }
 .fieldblock { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 550; color: var(--muted); }
+.vrow { align-items: flex-start !important; }
+.vmain { display: flex; flex-direction: column; gap: 2px; }
+.vnote { border-color: transparent; background: transparent; font-size: 13px; padding: 3px 4px; margin-left: -4px; color: var(--muted); }
+.vnote:hover, .vnote:focus { border-color: var(--line); background: var(--panel); color: var(--ink); }
+.vrow .num { padding-top: 8px; min-width: 26px; }

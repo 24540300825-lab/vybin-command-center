@@ -53,13 +53,14 @@ export default function Assets() {
         {state === 'ready' && rows.length === 0 && <p className="muted">No assets yet. Name the first thing your world needs and add it above.</p>}
         {rows.length > 0 && (
           <table className="table">
-            <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Status</th><th>Updated</th></tr></thead>
+            <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Version</th><th>Status</th><th>Updated</th></tr></thead>
             <tbody>
               {rows.map((a) => (
                 <tr key={a.id}>
                   <td className="num">{a.code}</td>
                   <td><Link className="link" to={`/assets/${a.id}`}>{a.name}</Link></td>
                   <td>{CATEGORIES[a.category] ?? a.category}</td>
+                  <td className="muted">{a.current_version > 0 ? `v${a.current_version}` : 'no file yet'}</td>
                   <td>
                     <select className={`chip-select s-${a.status}`} value={a.status} onChange={(e) => setStatus(a.id, e.target.value)} aria-label={`Status of ${a.name}`}>
                       {Object.entries(ASSET_STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

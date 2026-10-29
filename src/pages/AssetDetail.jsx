@@ -6,6 +6,7 @@ import { useDraft } from '../lib/useDraft.js';
 import { supabase } from '../lib/supabase.js';
 import { ASSET_STATUS } from '../lib/plain.js';
 import FilesPanel from '../components/FilesPanel.jsx';
+import VersionHistory from '../components/VersionHistory.jsx';
 import { CATEGORY_NAMES } from './Assets.jsx';
 
 function Save({ state }) {
@@ -45,7 +46,8 @@ function Detail({ asset, projectId }) {
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} placeholder="Style, size, where it is used, anything the artist should know." />
         </label>
       </div>
-      <FilesPanel projectId={projectId} assetId={asset.id} title="Files and 3D models" />
+      <FilesPanel projectId={projectId} assetId={asset.id} title="Add a file or a new version" />
+      <VersionHistory projectId={projectId} asset={asset} />
     </>
   );
 }
