@@ -69,7 +69,7 @@ function claudeArgs(permission) {
   const base = ['-p', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'dontAsk'];
   const read = ['Read', 'Glob', 'Grep'];
   const edit = ['Edit', 'Write', 'NotebookEdit'];
-  const run = ['Bash(npm run *)', 'Bash(npm test*)', 'Bash(npx vite *)', 'Bash(node *)', 'Bash(git status*)', 'Bash(git diff*)', 'Bash(git log*)'];
+  const run = ['Bash(npm run *)', 'Bash(npm test*)', 'Bash(npx vite *)', 'Bash(node --check *)', 'Bash(git status*)', 'Bash(git diff*)', 'Bash(git log*)'];
   const allowed = permission === 'edit_and_run' ? [...read, ...edit, ...run] : permission === 'edit_files' ? [...read, ...edit] : read;
   const args = [...base, '--allowedTools', ...allowed];
   if (permission !== 'edit_and_run') args.push('--disallowedTools', 'WebFetch', 'WebSearch', 'Bash');
