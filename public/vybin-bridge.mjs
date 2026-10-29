@@ -87,6 +87,51 @@ function friendly(name, input = {}) {
   }
 }
 
+
+// ---- noticing what Claude changed (so the result can be handed over for publishing) ----
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.vercel', '.next', '.cache']);
+const TEXT_EXT = /\.(js|mjs|cjs|jsx|ts|tsx|json|html|htm|css|md|txt|sql|glsl|vert|frag|svg|yml|yaml|toml)$/i;
+const NEVER_SEND = /^\.env|\.(pem|key|p12|pfx)$|^id_rsa|secret|credential/i; // secrets are never uploaded
+const MAX_FILE = 300 * 1024, MAX_TOTAL = 2.5 * 1024 * 1024, MAX_FILES = 200;
+function snapshot(root) {
+  const map = new Map(); let n = 0;
+  const walk = (dir) => {
+    let ents; try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      if (n > 20000) return;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(full); }
+      else if (e.isFile()) {
+        n++; let st; try { st = fs.statSync(full); } catch { continue; }
+        map.set(path.relative(root, full).split(path.sep).join('/'), { size: st.size, mtime: Math.round(st.mtimeMs) });
+      }
+    }
+  };
+  walk(root);
+  return map;
+}
+function diffSnapshots(root, before, after) {
+  const out = []; let total = 0;
+  const add = (rel, status, st) => {
+    if (out.length >= MAX_FILES) return;
+    const base = path.basename(rel);
+    const item = { path: rel, status, size: st?.size ?? 0, content: null };
+    if (status !== 'deleted') {
+      if (NEVER_SEND.test(base)) item.note = 'not uploaded (may hold secrets)';
+      else if (!TEXT_EXT.test(base)) item.note = 'binary or other file: not uploaded';
+      else if (st.size > MAX_FILE || total + st.size > MAX_TOTAL) item.note = 'too large to upload';
+      else {
+        try { const txt = fs.readFileSync(path.join(root, rel), 'utf8'); if (txt.includes('\u0000')) item.note = 'binary: not uploaded'; else { item.content = txt; total += st.size; } }
+        catch { item.note = 'could not be read'; }
+      }
+    }
+    out.push(item);
+  };
+  for (const [rel, st] of after) { const b = before.get(rel); if (!b) add(rel, 'added', st); else if (b.size !== st.size || b.mtime !== st.mtime) add(rel, 'modified', st); }
+  for (const [rel] of before) if (!after.has(rel)) add(rel, 'deleted', null);
+  return out;
+}
+
 async function runOne(cfg, claudeBin, job) {
   log(`Request received (${job.permission}).`);
   let sent = 0, cancelled = false, finalMsg = null, stderr = '';
@@ -95,6 +140,7 @@ async function runOne(cfg, claudeBin, job) {
     sent++;
     try { const st = await rpc('cc_bridge_event', { p_token: cfg.token, p_run: job.id, p_kind: kind, p_text: text }); if (st !== 'running') cancelled = true; } catch (e) { log('Could not report progress:', e.message); }
   };
+  const before = job.permission !== 'read_only' ? snapshot(cfg.workDir) : null;
   const needsShell = /\.(cmd|bat)$/i.test(claudeBin);
   const args = claudeArgs(job.permission);
   const child = needsShell
@@ -124,6 +170,13 @@ async function runOne(cfg, claudeBin, job) {
   await new Promise((r) => child.on('close', r));
   clearTimeout(timer); clearInterval(watch);
   await chain;
+  if (before) {
+    try {
+      const changes = diffSnapshots(cfg.workDir, before, snapshot(cfg.workDir));
+      await rpc('cc_bridge_changes', { p_token: cfg.token, p_run: job.id, p_changes: changes });
+      log(changes.length ? `Claude changed ${changes.length} file(s). The list was sent to the website.` : 'Claude did not change any files.');
+    } catch (e) { log('Could not send the list of changed files:', e.message); }
+  }
 
   if (cancelled && !finalMsg) { log('Stopped (cancelled or timed out).'); try { await rpc('cc_bridge_finish', { p_token: cfg.token, p_run: job.id, p_ok: false, p_result: '', p_error: 'Stopped before it finished.', p_usage: null }); } catch {} return; }
   const ok = !!finalMsg && !finalMsg.is_error && finalMsg.subtype === 'success';

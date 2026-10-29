@@ -15,6 +15,40 @@ async function copyText(text) {
 }
 const chipClass = (s) => ({ needs_review: 's-in_review', done: 's-done', running: 's-submitted', queued: 's-submitted', failed: 'bad', cancelled: '' }[s] ?? '');
 
+const CHANGE_LABEL = { added: 'New', modified: 'Changed', deleted: 'Removed' };
+
+// The files Claude changed on your computer (names only here; contents are kept for handing over to publish).
+function ChangedFiles({ run }) {
+  const [files, setFiles] = useState(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (run.permission === 'read_only') return;
+    let alive = true;
+    supabase.from('cc_run_changes').select('files').eq('run_id', run.id).maybeSingle().then(({ data }) => { if (alive) setFiles(data?.files ?? []); });
+    return () => { alive = false; };
+  }, [run.id, run.status, run.permission]);
+  if (run.permission === 'read_only' || files === null) return null;
+  const handover = `Xử lý bản sửa của lượt chạy ${run.id.slice(0, 8)}: đưa lên GitHub, đăng bản xem thử trên Vercel và gửi mình link để test.`;
+  return (
+    <div className="stepbox">
+      <h3 className="step">Files Claude changed on your computer</h3>
+      {files.length === 0 ? <p className="muted">No files were changed.</p> : (
+        <>
+          <ul className="feed">
+            {files.map((f) => (
+              <li key={f.path}><span style={{ minWidth: 0, wordBreak: 'break-all' }}>{f.path}{f.note ? <small className="muted" style={{ display: 'block' }}>{f.note}</small> : null}</span><span className="chip">{CHANGE_LABEL[f.status] ?? f.status}</span></li>
+            ))}
+          </ul>
+          <p className="muted small">Nothing has been published. To test it online, tell Claude in your Claude Code chat to publish it. You can paste this:</p>
+          <div className="insp-actions">
+            <button className="btn" onClick={async () => { setCopied(await copyText(handover)); setTimeout(() => setCopied(false), 2000); }}><Copy size={14} /> {copied ? 'Copied' : 'Copy the hand-over message'}</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function useData(projectId) {
   return {
     briefs: useTable('cc_briefs', projectId),
@@ -251,6 +285,8 @@ function RunView({ run, data, projectId, onFollowUp }) {
           {run.status === 'done' && <div className="insp-actions"><button className="btn" onClick={() => onFollowUp(run)}>Start a follow-up</button></div>}
         </div>
       )}
+
+      {['needs_review', 'done', 'failed'].includes(run.status) && <ChangedFiles run={run} />}
 
       {['failed', 'cancelled'].includes(run.status) && (
         <div className="insp-actions"><button className="btn" onClick={() => onFollowUp(run)}>Try again as a new request</button></div>
