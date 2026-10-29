@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useProject } from '../lib/project.jsx';
 import { useTable } from '../lib/useTable.js';
 import { supabase } from '../lib/supabase.js';
 import { ASSET_STATUS, timeAgo } from '../lib/plain.js';
 
 const CATEGORIES = { map: 'Map', room: 'Room', character: 'Character', furniture: 'Furniture', prop: 'Prop', vegetation: 'Vegetation', decoration: 'Decoration', lighting: 'Lighting' };
+
+export const CATEGORY_NAMES = CATEGORIES;
 
 export default function Assets() {
   const { projectId } = useProject();
@@ -34,7 +37,7 @@ export default function Assets() {
   return (
     <div className="page">
       <h1>Assets</h1>
-      <p className="muted lead">Every model, character and prop your world needs, and where each one stands. Adding files and previews comes in the next step.</p>
+      <p className="muted lead">Every model, character and prop your world needs, and where each one stands.  Open an asset to attach files and preview 3D models.</p>
 
       <form className="inline-form" onSubmit={add}>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name an asset, e.g. Oak tree" aria-label="Asset name" maxLength={80} />
@@ -55,7 +58,7 @@ export default function Assets() {
               {rows.map((a) => (
                 <tr key={a.id}>
                   <td className="num">{a.code}</td>
-                  <td>{a.name}</td>
+                  <td><Link className="link" to={`/assets/${a.id}`}>{a.name}</Link></td>
                   <td>{CATEGORIES[a.category] ?? a.category}</td>
                   <td>
                     <select className={`chip-select s-${a.status}`} value={a.status} onChange={(e) => setStatus(a.id, e.target.value)} aria-label={`Status of ${a.name}`}>

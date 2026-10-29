@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase.js';
 
 // Loads rows for the current project and keeps them live (insert / update / delete) without a refresh.
-export function useTable(table, projectId, { order = 'updated_at', ascending = false, limit = 200, extra } = {}) {
+// `extra` narrows the query (e.g. one brief's files), `match` does the same for live changes, `extraKey` re-runs when the narrowing changes.
+export function useTable(table, projectId, { order = 'updated_at', ascending = false, limit = 200, extra, match, extraKey = '' } = {}) {
   const [rows, setRows] = useState([]);
   const [state, setState] = useState('loading'); // loading | ready | error | offline
   const [error, setError] = useState(null);
   const orderRef = useRef({ order, ascending });
   orderRef.current = { order, ascending };
+  const matchRef = useRef(match);
+  matchRef.current = match;
 
   useEffect(() => {
     if (!projectId) return;
@@ -36,6 +39,7 @@ export function useTable(table, projectId, { order = 'updated_at', ascending = f
         setRows((cur) => {
           if (p.eventType === 'DELETE') return cur.filter((r) => r.id !== p.old.id);
           const without = cur.filter((r) => r.id !== p.new.id);
+          if (matchRef.current && !matchRef.current(p.new)) return without;
           return sortRows([p.new, ...without]).slice(0, limit);
         });
       })
@@ -45,7 +49,7 @@ export function useTable(table, projectId, { order = 'updated_at', ascending = f
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setState((s) => (s === 'ready' ? 'offline' : s));
       });
     return () => { alive = false; supabase.removeChannel(channel); };
-  }, [table, projectId, order, ascending, limit]);
+  }, [table, projectId, order, ascending, limit, extraKey]);
 
   return { rows, state, error };
 }

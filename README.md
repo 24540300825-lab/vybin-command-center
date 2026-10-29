@@ -2,7 +2,7 @@
 
 A private workspace for planning, briefing and reviewing the VY/BIN 3D world. This repo is **separate** from the live game (`vybin-multiplayer`) and never touches it.
 
-## What works today (step 1 of 6)
+## What works today (step 2 of 6)
 
 - Sign-in by emailed link (only allow-listed emails get a workspace)
 - Briefs: create from a template, edit sections, reorder, autosave, live updates across windows

@@ -9,6 +9,7 @@ import Overview from './pages/Overview.jsx';
 
 const Briefs = lazy(() => import('./pages/Briefs.jsx'));
 const Assets = lazy(() => import('./pages/Assets.jsx'));
+const AssetDetail = lazy(() => import('./pages/AssetDetail.jsx'));
 const Activity = lazy(() => import('./pages/Activity.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Planned = lazy(() => import('./pages/Planned.jsx'));
@@ -53,6 +54,7 @@ function Gate() {
           <Route path="/briefs" element={<Briefs />} />
           <Route path="/briefs/:briefId" element={<Briefs />} />
           <Route path="/assets" element={<Assets />} />
+          <Route path="/assets/:assetId" element={<AssetDetail />} />
           <Route path="/activity" element={<Activity />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/scenes" element={<Planned kind="scenes" />} />

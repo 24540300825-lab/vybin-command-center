@@ -1,33 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { useProject } from '../lib/project.jsx';
 import { useTable } from '../lib/useTable.js';
+import { useDraft } from '../lib/useDraft.js';
+import FilesPanel from '../components/FilesPanel.jsx';
 import { supabase } from '../lib/supabase.js';
 import { BRIEF_STATUS, PRIORITY, TEMPLATES, timeAgo } from '../lib/plain.js';
 
 const code = (n) => `BR-${String(n).padStart(3, '0')}`;
-
-// Keeps a field editable while saving quietly in the background. Remote changes only replace the text when you aren't mid-edit.
-function useDraft(remote, save) {
-  const [value, setValue] = useState(remote);
-  const [state, setState] = useState('saved'); // saved | saving | error
-  const dirty = useRef(false);
-  const timer = useRef(null);
-  const latest = useRef(save);
-  latest.current = save;
-  useEffect(() => { if (!dirty.current) setValue(remote); }, [remote]);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  const change = (next) => {
-    setValue(next); dirty.current = true; setState('saving');
-    clearTimeout(timer.current);
-    timer.current = setTimeout(async () => {
-      const err = await latest.current(next);
-      if (err) setState('error'); else { dirty.current = false; setState('saved'); }
-    }, 700);
-  };
-  return [value, change, state];
-}
 
 function SaveState({ state }) {
   return <span className={`save ${state}`} aria-live="polite">{state === 'saving' ? 'Saving…' : state === 'error' ? "Couldn't save. Keep typing to retry." : 'Saved'}</span>;
@@ -111,7 +92,8 @@ function Editor({ brief, sections, projectId }) {
         <Section key={s.id} s={s} first={i === 0} last={i === mine.length - 1} onMove={(d) => move(i, d)} onRemove={() => remove(s.id)} />
       ))}
       <button className="btn" onClick={addSection}><Plus size={15} /> Add a section</button>
-      <p className="muted foot">Files, 3D scenes and sending to Claude attach here in the next steps. Your changes save automatically.</p>
+      <FilesPanel projectId={projectId} briefId={brief.id} title="Reference files" />
+      <p className="muted foot">3D scenes and sending to Claude attach here in the next steps. Your changes save automatically.</p>
     </article>
   );
 }
