@@ -10,6 +10,8 @@ import Overview from './pages/Overview.jsx';
 const Briefs = lazy(() => import('./pages/Briefs.jsx'));
 const Assets = lazy(() => import('./pages/Assets.jsx'));
 const AssetDetail = lazy(() => import('./pages/AssetDetail.jsx'));
+const Scenes = lazy(() => import('./pages/Scenes.jsx'));
+const SceneEditor = lazy(() => import('./pages/SceneEditor.jsx'));
 const Activity = lazy(() => import('./pages/Activity.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Planned = lazy(() => import('./pages/Planned.jsx'));
@@ -57,7 +59,8 @@ function Gate() {
           <Route path="/assets/:assetId" element={<AssetDetail />} />
           <Route path="/activity" element={<Activity />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/scenes" element={<Planned kind="scenes" />} />
+          <Route path="/scenes" element={<Scenes />} />
+          <Route path="/scenes/:sceneId" element={<SceneEditor />} />
           <Route path="/claude" element={<Planned kind="claude" />} />
           <Route path="/health" element={<Planned kind="health" />} />
           <Route path="/art" element={<Planned kind="art" />} />

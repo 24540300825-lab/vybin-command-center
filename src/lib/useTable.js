@@ -51,5 +51,5 @@ export function useTable(table, projectId, { order = 'updated_at', ascending = f
     return () => { alive = false; supabase.removeChannel(channel); };
   }, [table, projectId, order, ascending, limit, extraKey]);
 
-  return { rows, state, error };
+  return { rows, state, error, setRows };
 }

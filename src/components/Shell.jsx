@@ -8,7 +8,7 @@ import CommandPalette from './CommandPalette.jsx';
 export const NAV = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/briefs', label: 'Briefs', icon: FileText },
-  { to: '/scenes', label: '3D scenes', icon: Box, soon: true },
+  { to: '/scenes', label: '3D scenes', icon: Box },
   { to: '/assets', label: 'Assets', icon: Library },
   { to: '/claude', label: 'Ask Claude', icon: MessageSquare, soon: true },
   { to: '/health', label: 'Project health', icon: HeartPulse, soon: true },

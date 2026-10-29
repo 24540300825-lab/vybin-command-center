@@ -19,6 +19,7 @@ export default function Overview() {
   const { projectId, name } = useProject();
   const briefs = useTable('cc_briefs', projectId);
   const assets = useTable('cc_assets', projectId);
+  const scenes = useTable('cc_scenes', projectId);
   const activity = useTable('cc_activity_events', projectId, { order: 'created_at', limit: 12 });
 
   const ready = briefs.state === 'ready';
@@ -57,7 +58,7 @@ export default function Overview() {
         <Stat label="Open briefs" value={ready ? active.length : '–'} to="/briefs" />
         <Stat label="Waiting for your review" value={ready ? toReview.length : '–'} to="/briefs" />
         <Stat label="Assets still to deliver" value={assets.state === 'ready' ? missing.length : '–'} hint={assets.state === 'ready' ? `${assets.rows.length} tracked in total` : undefined} to="/assets" />
-        <Stat label="Maps in the 3D editor" value="–" hint="3D scenes aren't built yet" />
+        <Stat label="Scenes in the 3D editor" value={scenes.state === 'ready' ? scenes.rows.length : '–'} to="/scenes" />
       </section>
 
       <div className="cols">
