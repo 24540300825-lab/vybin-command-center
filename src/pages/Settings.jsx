@@ -36,8 +36,7 @@ async function runChecks({ projectId, user }) {
 }
 
 const LATER = [
-  { title: 'Your code on GitHub', text: "Not connected yet. Needed to show what changed and when." },
-  { title: 'Your published website', text: "Not connected yet. Needed to show whether the latest update went live." },
+  { title: 'Publish history from Vercel', text: "Not connected. Project health shows which version is live; a full success/failed history would need read-only access to your Vercel account." },
 ];
 
 function ConnectClaude({ projectId }) {

@@ -16,7 +16,7 @@ const Guidelines = lazy(() => import('./pages/Guidelines.jsx'));
 const AskClaude = lazy(() => import('./pages/AskClaude.jsx'));
 const Activity = lazy(() => import('./pages/Activity.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
-const Planned = lazy(() => import('./pages/Planned.jsx'));
+const Health = lazy(() => import('./pages/Health.jsx'));
 
 function Centered({ title, children }) {
   return (
@@ -65,7 +65,7 @@ function Gate() {
           <Route path="/scenes/:sceneId" element={<SceneEditor />} />
           <Route path="/claude" element={<AskClaude />} />
           <Route path="/claude/:runId" element={<AskClaude />} />
-          <Route path="/health" element={<Planned kind="health" />} />
+          <Route path="/health" element={<Health />} />
           <Route path="/art" element={<Guidelines />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
